@@ -601,6 +601,20 @@ describe('WebviewMessageHandlers', () => {
       expect(mockState.setAuthError).toHaveBeenCalledWith(true);
     });
 
+    it('sends authError with feature-not-enabled message when BotDefinition INVALID_TYPE occurs', async () => {
+      const error = new Error("sObject type 'BotDefinition' is not supported.");
+      error.name = 'INVALID_TYPE';
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
+        'Agentforce is not enabled',
+        'This org does not have Agentforce enabled. Select an org with Agentforce to continue.'
+      );
+      expect(mockState.setAuthError).toHaveBeenCalledWith(true);
+    });
+
     it('sends empty agent list for non-connection errors', async () => {
       const error = new Error('Some unexpected error');
       (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);

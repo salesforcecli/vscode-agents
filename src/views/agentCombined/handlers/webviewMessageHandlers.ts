@@ -327,7 +327,8 @@ export class WebviewMessageHandlers {
       const errorMessage = err instanceof Error ? err.message : String(err);
       const errorName = err instanceof Error ? err.name : '';
       const fullError = `${errorName}: ${errorMessage}`;
-      const isConnectionError =
+
+      const isAuthError =
         errorName === 'RefreshTokenAuthError' ||
         fullError.includes('RefreshTokenAuthError') ||
         fullError.includes('authentication failure') ||
@@ -337,7 +338,16 @@ export class WebviewMessageHandlers {
         fullError.includes('INVALID_SESSION_ID') ||
         fullError.includes('No default org configured');
 
-      if (isConnectionError) {
+      const isFeatureNotEnabled =
+        fullError.includes('INVALID_TYPE') && fullError.includes('BotDefinition');
+
+      if (isFeatureNotEnabled) {
+        this.messageSender.sendAuthError(
+          'Agentforce is not enabled',
+          'This org does not have Agentforce enabled. Select an org with Agentforce to continue.'
+        );
+        await this.state.setAuthError(true);
+      } else if (isAuthError) {
         this.messageSender.sendAuthError(
           'Unable to connect to org',
           'Set a new default org or re-authenticate to continue.'
