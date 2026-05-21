@@ -131,4 +131,33 @@ describe('AgentViewState', () => {
       expect(state.previewedSessionId).toBeUndefined();
     });
   });
+
+  describe('hasAuthError', () => {
+    it('defaults to false', () => {
+      expect(state.hasAuthError).toBe(false);
+    });
+
+    it('tracks state when setAuthError is called with true', async () => {
+      await state.setAuthError(true);
+
+      expect(state.hasAuthError).toBe(true);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'setContext',
+        'agentforceDX:authError',
+        true
+      );
+    });
+
+    it('resets state when setAuthError is called with false', async () => {
+      await state.setAuthError(true);
+      await state.setAuthError(false);
+
+      expect(state.hasAuthError).toBe(false);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'setContext',
+        'agentforceDX:authError',
+        false
+      );
+    });
+  });
 });

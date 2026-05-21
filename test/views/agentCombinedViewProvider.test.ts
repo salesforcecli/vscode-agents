@@ -388,4 +388,10 @@ describe('AgentCombinedViewProvider', () => {
     });
   });
 
+  describe('hasAuthError', () => {
+    it('should default to false', () => {
+      expect(provider.hasAuthError).toBe(false);
+    });
+  });
+
 });
