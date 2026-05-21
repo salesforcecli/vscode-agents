@@ -32,6 +32,7 @@ const mockVscodeApi = {
   clearMessages: jest.fn(),
   getConfiguration: jest.fn(),
   executeCommand: jest.fn(),
+  openUrl: jest.fn(),
   setSelectedAgentId: jest.fn(),
   loadAgentHistory: jest.fn(),
   setLiveMode: jest.fn(),
@@ -1208,6 +1209,29 @@ describe('App', () => {
         expect(screen.queryByText('Unable to connect to org')).not.toBeInTheDocument();
         expect(screen.getByTestId('agent-selector')).toBeInTheDocument();
       });
+    });
+
+    it('should show Enable Agentforce button when setupUrl is provided', async () => {
+      render(<App />);
+
+      act(() => {
+        triggerMessage('authError', {
+          message: 'Agentforce is not enabled',
+          details: 'This org does not have Agentforce enabled. Select an org with Agentforce to continue.',
+          setupUrl: 'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home'
+        });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Agentforce is not enabled')).toBeInTheDocument();
+        expect(screen.getByText('Enable Agentforce')).toBeInTheDocument();
+        expect(screen.getByText('Select Another Org')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Enable Agentforce'));
+      expect(mockVscodeApi.openUrl).toHaveBeenCalledWith(
+        'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home'
+      );
     });
   });
 });

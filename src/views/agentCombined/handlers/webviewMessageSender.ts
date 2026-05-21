@@ -117,10 +117,10 @@ export class WebviewMessageSender {
     this.postMessage('error', { message: sanitizedMessage, details: sanitizedDetails });
   }
 
-  sendAuthError(message: string, details?: string): void {
+  sendAuthError(message: string, details?: string, setupUrl?: string): void {
     const sanitizedMessage = this.stripHtmlTags(message);
     const sanitizedDetails = details ? this.stripHtmlTags(details) : undefined;
-    this.postMessage('authError', { message: sanitizedMessage, details: sanitizedDetails });
+    this.postMessage('authError', { message: sanitizedMessage, details: sanitizedDetails, setupUrl });
   }
 
   sendDebugLogError(message: string): void {

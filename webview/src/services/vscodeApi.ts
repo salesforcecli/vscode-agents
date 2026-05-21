@@ -200,8 +200,13 @@ class VSCodeApiService {
   }
 
   // Execute a VSCode command
-  executeCommand(commandId: string) {
-    this.postMessage('executeCommand', { commandId });
+  executeCommand(commandId: string, ...args: unknown[]) {
+    this.postMessage('executeCommand', { commandId, args });
+  }
+
+  // Open a URL in the default browser
+  openUrl(url: string) {
+    this.postMessage('openUrl', { url });
   }
 
   // Notify the extension about the selected agent ID

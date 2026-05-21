@@ -19,6 +19,12 @@ jest.mock('vscode', () => ({
   commands: {
     executeCommand: jest.fn()
   },
+  env: {
+    openExternal: jest.fn().mockResolvedValue(true)
+  },
+  Uri: {
+    parse: jest.fn((url: string) => ({ toString: () => url }))
+  },
   window: {
     showInformationMessage: jest.fn(),
     showErrorMessage: jest.fn()
@@ -79,7 +85,9 @@ jest.mock('../../../../src/views/agentCombined/session', () => ({
 // Import after mocks
 import { WebviewMessageHandlers } from '../../../../src/views/agentCombined/handlers/webviewMessageHandlers';
 import { CoreExtensionService } from '../../../../src/services/coreExtensionService';
+import { Agent } from '@salesforce/agents';
 import { listSessionsForAgent } from '../../../../src/views/agentCombined/session';
+import * as vscode from 'vscode';
 
 describe('WebviewMessageHandlers', () => {
   let handlers: WebviewMessageHandlers;
@@ -601,7 +609,7 @@ describe('WebviewMessageHandlers', () => {
       expect(mockState.setAuthError).toHaveBeenCalledWith(true);
     });
 
-    it('sends authError with feature-not-enabled message when BotDefinition INVALID_TYPE occurs', async () => {
+    it('sends authError with feature-not-enabled message when BotDefinition INVALID_TYPE occurs at connection', async () => {
       const error = new Error("sObject type 'BotDefinition' is not supported.");
       error.name = 'INVALID_TYPE';
       (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
@@ -610,7 +618,26 @@ describe('WebviewMessageHandlers', () => {
 
       expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
         'Agentforce is not enabled',
-        'This org does not have Agentforce enabled. Select an org with Agentforce to continue.'
+        'This org does not have Agentforce enabled. Select an org with Agentforce to continue.',
+        undefined
+      );
+      expect(mockState.setAuthError).toHaveBeenCalledWith(true);
+    });
+
+    it('includes setupUrl when INVALID_TYPE occurs and instanceUrl is available', async () => {
+      const error = new Error("sObject type 'BotDefinition' is not supported.");
+      error.name = 'INVALID_TYPE';
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockResolvedValueOnce({
+        instanceUrl: 'https://myorg.salesforce.com'
+      });
+      (Agent.listPreviewable as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
+        'Agentforce is not enabled',
+        'This org does not have Agentforce enabled. Select an org with Agentforce to continue.',
+        'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home'
       );
       expect(mockState.setAuthError).toHaveBeenCalledWith(true);
     });
@@ -633,6 +660,44 @@ describe('WebviewMessageHandlers', () => {
       await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
 
       expect(mockState.setHasAgents).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('handleOpenUrl', () => {
+    it('opens external URL via vscode.env.openExternal', async () => {
+      await handlers.handleMessage({
+        command: 'openUrl',
+        data: { url: 'https://example.salesforce.com/lightning/setup/EinsteinCopilot/home' }
+      } as any);
+
+      expect(vscode.Uri.parse).toHaveBeenCalledWith(
+        'https://example.salesforce.com/lightning/setup/EinsteinCopilot/home'
+      );
+      expect(vscode.env.openExternal).toHaveBeenCalled();
+    });
+
+    it('does nothing when url is missing', async () => {
+      await handlers.handleMessage({
+        command: 'openUrl',
+        data: {}
+      } as any);
+
+      expect(vscode.env.openExternal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleExecuteCommand', () => {
+    it('passes args to vscode.commands.executeCommand', async () => {
+      await handlers.handleMessage({
+        command: 'executeCommand',
+        data: { commandId: 'sf.set.default.org', args: ['--alias', 'test'] }
+      } as any);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'sf.set.default.org',
+        '--alias',
+        'test'
+      );
     });
   });
 });

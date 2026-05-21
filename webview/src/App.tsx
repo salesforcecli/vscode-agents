@@ -41,7 +41,7 @@ const App: React.FC = () => {
   const [selectedAgentInfo, setSelectedAgentInfo] = useState<AgentInfo | null>(null);
   const [hasAgents, setHasAgents] = useState(false);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
-  const [authError, setAuthError] = useState<{ message: string; details?: string } | null>(null);
+  const [authError, setAuthError] = useState<{ message: string; details?: string; setupUrl?: string } | null>(null);
   const sessionChangeQueueRef = useRef(Promise.resolve());
   const displayedAgentIdRef = useRef<string>('');
   const desiredAgentIdRef = useRef<string>('');
@@ -155,8 +155,8 @@ const App: React.FC = () => {
       setActiveTab(tab);
     });
 
-    const disposeAuthError = vscodeApi.onMessage('authError', (data: { message: string; details?: string }) => {
-      setAuthError({ message: data.message, details: data.details });
+    const disposeAuthError = vscodeApi.onMessage('authError', (data: { message: string; details?: string; setupUrl?: string }) => {
+      setAuthError({ message: data.message, details: data.details, setupUrl: data.setupUrl });
       setIsLoadingAgents(false);
     });
 
@@ -519,11 +519,20 @@ const App: React.FC = () => {
               <div className="agent-preview-error-icon" />
               <p className="agent-preview-error-message">{authError.message}</p>
               {authError.details && <p className="agent-preview-error-details">{authError.details}</p>}
-              <Button appearance="primary" size="small" onClick={() => {
-                vscodeApi.executeCommand('sf.set.default.org');
-              }}>
-                Select Another Org
-              </Button>
+              <div className="agent-preview-error-buttons">
+                <Button appearance="secondary" size="small" onClick={() => {
+                  vscodeApi.executeCommand('sf.set.default.org');
+                }}>
+                  Select Another Org
+                </Button>
+                {authError.setupUrl && (
+                  <Button appearance="primary" size="small" onClick={() => {
+                    vscodeApi.openUrl(authError.setupUrl!);
+                  }}>
+                    Enable Agentforce
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

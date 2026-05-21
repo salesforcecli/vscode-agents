@@ -52,6 +52,7 @@ export class WebviewMessageHandlers {
       openTraceJson: async msg => await this.handleOpenTraceJson(msg),
       getConfiguration: async msg => await this.handleGetConfiguration(msg),
       executeCommand: async msg => await this.handleExecuteCommand(msg),
+      openUrl: async msg => await this.handleOpenUrl(msg),
       setSelectedAgentId: async msg => await this.handleSetSelectedAgentId(msg),
       setLiveMode: async msg => await this.handleSetLiveMode(msg),
       getInitialLiveMode: async () => await this.handleGetInitialLiveMode(),
@@ -253,8 +254,10 @@ export class WebviewMessageHandlers {
   }
 
   private async handleGetAvailableAgents(): Promise<void> {
+    let instanceUrl: string | undefined;
     try {
       const conn = await CoreExtensionService.getDefaultConnection();
+      instanceUrl = conn.instanceUrl;
       const project = SfProject.getInstance();
       const allAgents = await Agent.listPreviewable(conn, project);
 
@@ -342,9 +345,13 @@ export class WebviewMessageHandlers {
         fullError.includes('INVALID_TYPE') && fullError.includes('BotDefinition');
 
       if (isFeatureNotEnabled) {
+        const setupUrl = instanceUrl
+          ? `${instanceUrl}/lightning/setup/EinsteinCopilot/home`
+          : undefined;
         this.messageSender.sendAuthError(
           'Agentforce is not enabled',
-          'This org does not have Agentforce enabled. Select an org with Agentforce to continue.'
+          'This org does not have Agentforce enabled. Select an org with Agentforce to continue.',
+          setupUrl
         );
         await this.state.setAuthError(true);
       } else if (isAuthError) {
@@ -403,10 +410,19 @@ export class WebviewMessageHandlers {
   }
 
   private async handleExecuteCommand(message: AgentMessage): Promise<void> {
-    const data = message.data as { commandId?: string } | undefined;
+    const data = message.data as { commandId?: string; args?: unknown[] } | undefined;
     const commandId = data?.commandId;
     if (commandId && typeof commandId === 'string') {
-      await vscode.commands.executeCommand(commandId);
+      const args = Array.isArray(data?.args) ? data.args : [];
+      await vscode.commands.executeCommand(commandId, ...args);
+    }
+  }
+
+  private async handleOpenUrl(message: AgentMessage): Promise<void> {
+    const data = message.data as { url?: string } | undefined;
+    const url = data?.url;
+    if (url && typeof url === 'string') {
+      await vscode.env.openExternal(vscode.Uri.parse(url));
     }
   }
 
