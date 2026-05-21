@@ -618,7 +618,7 @@ describe('WebviewMessageHandlers', () => {
 
       expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
         'Agentforce is not enabled',
-        'This org does not have Agentforce enabled. Select an org with Agentforce to continue.',
+        'This org doesn\'t have Agentforce enabled. You can enable it or switch to another org.',
         undefined
       );
       expect(mockState.setAuthError).toHaveBeenCalledWith(true);
@@ -636,7 +636,7 @@ describe('WebviewMessageHandlers', () => {
 
       expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
         'Agentforce is not enabled',
-        'This org does not have Agentforce enabled. Select an org with Agentforce to continue.',
+        'This org doesn\'t have Agentforce enabled. You can enable it or switch to another org.',
         'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home'
       );
       expect(mockState.setAuthError).toHaveBeenCalledWith(true);

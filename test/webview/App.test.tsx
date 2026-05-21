@@ -1217,7 +1217,7 @@ describe('App', () => {
       act(() => {
         triggerMessage('authError', {
           message: 'Agentforce is not enabled',
-          details: 'This org does not have Agentforce enabled. Select an org with Agentforce to continue.',
+          details: 'This org doesn\'t have Agentforce enabled. You can enable it or switch to another org.',
           setupUrl: 'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home'
         });
       });

@@ -30,6 +30,9 @@ export class AgentViewState {
   private _currentAgentActiveVersion?: number;
   private _agentVersionsCache = new Map<string, Array<{ VersionNumber: number; Status: string }>>();
 
+  // Error state
+  private _hasAuthError = false;
+
   // Mode state
   private _isApexDebuggingEnabled = false;
   private _isLiveMode = false;
@@ -255,7 +258,12 @@ export class AgentViewState {
     await vscode.commands.executeCommand('setContext', 'agentforceDX:hasAgents', hasAgents);
   }
 
+  get hasAuthError(): boolean {
+    return this._hasAuthError;
+  }
+
   async setAuthError(hasError: boolean): Promise<void> {
+    this._hasAuthError = hasError;
     await vscode.commands.executeCommand('setContext', 'agentforceDX:authError', hasError);
   }
 

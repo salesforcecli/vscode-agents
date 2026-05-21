@@ -350,7 +350,7 @@ export class WebviewMessageHandlers {
           : undefined;
         this.messageSender.sendAuthError(
           'Agentforce is not enabled',
-          'This org does not have Agentforce enabled. Select an org with Agentforce to continue.',
+          'This org doesn\'t have Agentforce enabled. You can enable it or switch to another org.',
           setupUrl
         );
         await this.state.setAuthError(true);

@@ -180,6 +180,15 @@ const registerAgentCombinedView = (context: vscode.ExtensionContext): vscode.Dis
       console.error('Could not set up org change listener:', err.message);
     });
 
+  // Re-fetch agents when window regains focus while in auth error state
+  disposables.push(
+    vscode.window.onDidChangeWindowState(async state => {
+      if (state.focused && provider.hasAuthError) {
+        await provider.refreshAvailableAgents();
+      }
+    })
+  );
+
   // Shared helper for selecting an agent from a quick pick
   const showAgentPicker = async (
     placeHolder: string
