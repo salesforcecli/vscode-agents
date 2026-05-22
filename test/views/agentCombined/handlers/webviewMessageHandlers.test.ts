@@ -19,6 +19,12 @@ jest.mock('vscode', () => ({
   commands: {
     executeCommand: jest.fn()
   },
+  env: {
+    openExternal: jest.fn().mockResolvedValue(true)
+  },
+  Uri: {
+    parse: jest.fn((url: string) => ({ toString: () => url }))
+  },
   window: {
     showInformationMessage: jest.fn(),
     showErrorMessage: jest.fn()
@@ -79,7 +85,9 @@ jest.mock('../../../../src/views/agentCombined/session', () => ({
 // Import after mocks
 import { WebviewMessageHandlers } from '../../../../src/views/agentCombined/handlers/webviewMessageHandlers';
 import { CoreExtensionService } from '../../../../src/services/coreExtensionService';
+import { Agent } from '@salesforce/agents';
 import { listSessionsForAgent } from '../../../../src/views/agentCombined/session';
+import * as vscode from 'vscode';
 
 describe('WebviewMessageHandlers', () => {
   let handlers: WebviewMessageHandlers;
@@ -113,12 +121,18 @@ describe('WebviewMessageHandlers', () => {
       setResetAgentViewAvailable: jest.fn().mockResolvedValue(undefined),
       setSessionErrorState: jest.fn().mockResolvedValue(undefined),
       setConversationDataAvailable: jest.fn().mockResolvedValue(undefined),
+      setAuthError: jest.fn().mockResolvedValue(undefined),
+      setHasAgents: jest.fn().mockResolvedValue(undefined),
+      agentVersionsCache: new Map(),
+      pendingSelectAgentId: undefined,
       cancelPendingSessionStart: jest.fn(),
       clearSessionState: jest.fn()
     };
 
     mockMessageSender = {
       sendError: jest.fn().mockResolvedValue(undefined),
+      sendAuthError: jest.fn(),
+      sendAvailableAgents: jest.fn(),
       sendClearMessages: jest.fn(),
       sendSessionList: jest.fn(),
       sendSessionStarting: jest.fn(),
@@ -534,6 +548,156 @@ describe('WebviewMessageHandlers', () => {
 
       expect(mockHistoryManager.loadAndSendTraceHistory).toHaveBeenCalled();
       expect(mockHistoryManager.loadAndSendTracesForSession).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleGetAvailableAgents - connection errors', () => {
+    const originalError = console.error;
+    beforeAll(() => {
+      console.error = jest.fn();
+    });
+    afterAll(() => {
+      console.error = originalError;
+    });
+
+    it('sends authError when RefreshTokenAuthError occurs', async () => {
+      const error = new Error('Error authenticating with the refresh token due to: authentication failure');
+      error.name = 'RefreshTokenAuthError';
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
+        'Unable to connect to org',
+        'Set a new default org or re-authenticate to continue.'
+      );
+      expect(mockState.setAuthError).toHaveBeenCalledWith(true);
+      expect(mockMessageSender.sendAvailableAgents).not.toHaveBeenCalled();
+    });
+
+    it('sends authError when INVALID_CROSS_REFERENCE_KEY occurs', async () => {
+      const error = new Error('invalid cross reference id');
+      error.name = 'INVALID_CROSS_REFERENCE_KEY';
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
+        'Unable to connect to org',
+        'Set a new default org or re-authenticate to continue.'
+      );
+      expect(mockState.setAuthError).toHaveBeenCalledWith(true);
+    });
+
+    it('sends authError when INVALID_SESSION_ID occurs', async () => {
+      const error = new Error('INVALID_SESSION_ID: Session expired or invalid');
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAuthError).toHaveBeenCalled();
+      expect(mockState.setAuthError).toHaveBeenCalledWith(true);
+    });
+
+    it('sends authError when no default org is configured', async () => {
+      const error = new Error('No default org configured. Set a default org with: sf config set target-org=<username>');
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAuthError).toHaveBeenCalled();
+      expect(mockState.setAuthError).toHaveBeenCalledWith(true);
+    });
+
+    it('sends authError with feature-not-enabled message when BotDefinition INVALID_TYPE occurs at connection', async () => {
+      const error = new Error("sObject type 'BotDefinition' is not supported.");
+      error.name = 'INVALID_TYPE';
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
+        'Agentforce is not enabled',
+        'This org doesn\'t have Agentforce enabled. You can enable it or switch to another org.',
+        undefined
+      );
+      expect(mockState.setAuthError).toHaveBeenCalledWith(true);
+    });
+
+    it('includes setupUrl when INVALID_TYPE occurs and instanceUrl is available', async () => {
+      const error = new Error("sObject type 'BotDefinition' is not supported.");
+      error.name = 'INVALID_TYPE';
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockResolvedValueOnce({
+        instanceUrl: 'https://myorg.salesforce.com'
+      });
+      (Agent.listPreviewable as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAuthError).toHaveBeenCalledWith(
+        'Agentforce is not enabled',
+        'This org doesn\'t have Agentforce enabled. You can enable it or switch to another org.',
+        'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home'
+      );
+      expect(mockState.setAuthError).toHaveBeenCalledWith(true);
+    });
+
+    it('sends empty agent list for non-connection errors', async () => {
+      const error = new Error('Some unexpected error');
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockMessageSender.sendAvailableAgents).toHaveBeenCalledWith([], undefined);
+      expect(mockMessageSender.sendAuthError).not.toHaveBeenCalled();
+      expect(mockState.setAuthError).not.toHaveBeenCalled();
+    });
+
+    it('sets hasAgents to false on any error', async () => {
+      const error = new Error('authentication failure');
+      (CoreExtensionService.getDefaultConnection as jest.Mock).mockRejectedValueOnce(error);
+
+      await handlers.handleMessage({ command: 'getAvailableAgents' } as any);
+
+      expect(mockState.setHasAgents).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('handleOpenUrl', () => {
+    it('opens external URL via vscode.env.openExternal', async () => {
+      await handlers.handleMessage({
+        command: 'openUrl',
+        data: { url: 'https://example.salesforce.com/lightning/setup/EinsteinCopilot/home' }
+      } as any);
+
+      expect(vscode.Uri.parse).toHaveBeenCalledWith(
+        'https://example.salesforce.com/lightning/setup/EinsteinCopilot/home'
+      );
+      expect(vscode.env.openExternal).toHaveBeenCalled();
+    });
+
+    it('does nothing when url is missing', async () => {
+      await handlers.handleMessage({
+        command: 'openUrl',
+        data: {}
+      } as any);
+
+      expect(vscode.env.openExternal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleExecuteCommand', () => {
+    it('passes args to vscode.commands.executeCommand', async () => {
+      await handlers.handleMessage({
+        command: 'executeCommand',
+        data: { commandId: 'sf.set.default.org', args: ['--alias', 'test'] }
+      } as any);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'sf.set.default.org',
+        '--alias',
+        'test'
+      );
     });
   });
 });

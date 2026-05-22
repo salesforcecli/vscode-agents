@@ -52,6 +52,7 @@ export class WebviewMessageHandlers {
       openTraceJson: async msg => await this.handleOpenTraceJson(msg),
       getConfiguration: async msg => await this.handleGetConfiguration(msg),
       executeCommand: async msg => await this.handleExecuteCommand(msg),
+      openUrl: async msg => await this.handleOpenUrl(msg),
       setSelectedAgentId: async msg => await this.handleSetSelectedAgentId(msg),
       setLiveMode: async msg => await this.handleSetLiveMode(msg),
       getInitialLiveMode: async () => await this.handleGetInitialLiveMode(),
@@ -253,8 +254,10 @@ export class WebviewMessageHandlers {
   }
 
   private async handleGetAvailableAgents(): Promise<void> {
+    let instanceUrl: string | undefined;
     try {
       const conn = await CoreExtensionService.getDefaultConnection();
+      instanceUrl = conn.instanceUrl;
       const project = SfProject.getInstance();
       const allAgents = await Agent.listPreviewable(conn, project);
 
@@ -312,6 +315,7 @@ export class WebviewMessageHandlers {
       this.messageSender.sendAvailableAgents(agentsWithVersions, selectAgentId);
 
       // Update context for command visibility
+      await this.state.setAuthError(false);
       await this.state.setHasAgents(mappedAgents.length > 0);
 
       // Clear the pending/current agent IDs after use
@@ -322,7 +326,43 @@ export class WebviewMessageHandlers {
     } catch (err) {
       console.error('Error getting available agents from org:', err);
       this.state.pendingSelectAgentId = undefined;
-      this.messageSender.sendAvailableAgents([], undefined);
+
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorName = err instanceof Error ? err.name : '';
+      const fullError = `${errorName}: ${errorMessage}`;
+
+      const isAuthError =
+        errorName === 'RefreshTokenAuthError' ||
+        fullError.includes('RefreshTokenAuthError') ||
+        fullError.includes('authentication failure') ||
+        fullError.includes('expired') ||
+        fullError.includes('INVALID_CROSS_REFERENCE_KEY') ||
+        fullError.includes('invalid cross reference id') ||
+        fullError.includes('INVALID_SESSION_ID') ||
+        fullError.includes('No default org configured');
+
+      const isFeatureNotEnabled =
+        fullError.includes('INVALID_TYPE') && fullError.includes('BotDefinition');
+
+      if (isFeatureNotEnabled) {
+        const setupUrl = instanceUrl
+          ? `${instanceUrl}/lightning/setup/EinsteinCopilot/home`
+          : undefined;
+        this.messageSender.sendAuthError(
+          'Agentforce is not enabled',
+          'This org doesn\'t have Agentforce enabled. You can enable it or switch to another org.',
+          setupUrl
+        );
+        await this.state.setAuthError(true);
+      } else if (isAuthError) {
+        this.messageSender.sendAuthError(
+          'Unable to connect to org',
+          'Set a new default org or re-authenticate to continue.'
+        );
+        await this.state.setAuthError(true);
+      } else {
+        this.messageSender.sendAvailableAgents([], undefined);
+      }
       await this.state.setHasAgents(false);
     }
   }
@@ -370,10 +410,19 @@ export class WebviewMessageHandlers {
   }
 
   private async handleExecuteCommand(message: AgentMessage): Promise<void> {
-    const data = message.data as { commandId?: string } | undefined;
+    const data = message.data as { commandId?: string; args?: unknown[] } | undefined;
     const commandId = data?.commandId;
     if (commandId && typeof commandId === 'string') {
-      await vscode.commands.executeCommand(commandId);
+      const args = Array.isArray(data?.args) ? data.args : [];
+      await vscode.commands.executeCommand(commandId, ...args);
+    }
+  }
+
+  private async handleOpenUrl(message: AgentMessage): Promise<void> {
+    const data = message.data as { url?: string } | undefined;
+    const url = data?.url;
+    if (url && typeof url === 'string') {
+      await vscode.env.openExternal(vscode.Uri.parse(url));
     }
   }
 

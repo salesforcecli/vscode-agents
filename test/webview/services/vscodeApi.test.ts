@@ -275,7 +275,16 @@ describe('vscodeApi', () => {
 
       expect(mockVSCodeApi.postMessage).toHaveBeenCalledWith({
         command: 'executeCommand',
-        data: { commandId: 'workbench.action.reloadWindow' }
+        data: { commandId: 'workbench.action.reloadWindow', args: [] }
+      });
+    });
+
+    it('should send openUrl message', () => {
+      vscodeApi.openUrl('https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home');
+
+      expect(mockVSCodeApi.postMessage).toHaveBeenCalledWith({
+        command: 'openUrl',
+        data: { url: 'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home' }
       });
     });
   });

@@ -4,6 +4,7 @@ import AgentTracer from './components/AgentTracer/AgentTracer.js';
 import AgentSelector from './components/AgentPreview/AgentSelector.js';
 import SessionHistory from './components/SessionHistory/SessionHistory.js';
 import TabNavigation from './components/shared/TabNavigation.js';
+import { Button } from './components/shared/Button.js';
 import { vscodeApi, AgentInfo, AgentSource } from './services/vscodeApi.js';
 import './App.css';
 
@@ -40,6 +41,7 @@ const App: React.FC = () => {
   const [selectedAgentInfo, setSelectedAgentInfo] = useState<AgentInfo | null>(null);
   const [hasAgents, setHasAgents] = useState(false);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
+  const [authError, setAuthError] = useState<{ message: string; details?: string; setupUrl?: string } | null>(null);
   const sessionChangeQueueRef = useRef(Promise.resolve());
   const displayedAgentIdRef = useRef<string>('');
   const desiredAgentIdRef = useRef<string>('');
@@ -91,6 +93,7 @@ const App: React.FC = () => {
     const disposeRefreshAgents = vscodeApi.onMessage('refreshAgents', () => {
       // Switch back to preview tab when refreshing agents
       setActiveTab('preview');
+      setAuthError(null);
       sessionActiveRef.current = false;
       setIsSessionActive(false);
       setIsSessionStarting(false);
@@ -152,6 +155,11 @@ const App: React.FC = () => {
       setActiveTab(tab);
     });
 
+    const disposeAuthError = vscodeApi.onMessage('authError', (data: { message: string; details?: string; setupUrl?: string }) => {
+      setAuthError({ message: data.message, details: data.details, setupUrl: data.setupUrl });
+      setIsLoadingAgents(false);
+    });
+
     // Request initial live mode state from extension
     vscodeApi.getInitialLiveMode();
 
@@ -159,6 +167,7 @@ const App: React.FC = () => {
       disposeSelectAgent();
       disposeRefreshAgents();
       disposeSetLiveMode();
+      disposeAuthError();
       disposeTestStartSession();
       disposeTestSendMessage();
       disposeTestEndSession();
@@ -500,6 +509,36 @@ const App: React.FC = () => {
 
   const previewAgentId = desiredAgentId !== '' ? desiredAgentId : displayedAgentId;
   const pendingAgentId = desiredAgentId !== displayedAgentId ? desiredAgentId : null;
+
+  if (authError) {
+    return (
+      <div className="app">
+        <div className="app-content">
+          <div className="agent-preview">
+            <div className="agent-preview-error">
+              <div className="agent-preview-error-icon" />
+              <p className="agent-preview-error-message">{authError.message}</p>
+              {authError.details && <p className="agent-preview-error-details">{authError.details}</p>}
+              <div className="agent-preview-error-buttons">
+                <Button appearance="secondary" size="small" onClick={() => {
+                  vscodeApi.executeCommand('sf.set.default.org');
+                }}>
+                  Select Another Org
+                </Button>
+                {authError.setupUrl && (
+                  <Button appearance="primary" size="small" onClick={() => {
+                    vscodeApi.openUrl(authError.setupUrl!);
+                  }}>
+                    Enable Agentforce
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">

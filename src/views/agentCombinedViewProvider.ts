@@ -180,6 +180,10 @@ export class AgentCombinedViewProvider implements vscode.WebviewViewProvider {
   /**
    * Gets the currently selected agent ID
    */
+  public get hasAuthError(): boolean {
+    return this.state.hasAuthError;
+  }
+
   public getCurrentAgentId(): string | undefined {
     return this.state.currentAgentId;
   }

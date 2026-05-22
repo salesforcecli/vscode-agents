@@ -58,6 +58,13 @@ body.vscode-high-contrast .agent-preview-error-icon {
   white-space: pre-wrap;
 }
 
+.agent-preview-error-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .agent-preview-error .vscode-button {
   width: auto;
   min-width: auto;

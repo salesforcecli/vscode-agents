@@ -180,47 +180,47 @@
       "view/title": [
         {
           "command": "sf.agent.combined.view.exportConversation",
-          "when": "view == sf.agent.combined.view && agentforceDX:agentSelected && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:sessionError && agentforceDX:hasConversationData",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && agentforceDX:agentSelected && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:sessionError && agentforceDX:hasConversationData",
           "group": "navigation@3"
         },
         {
           "command": "salesforcedx-vscode-agents.activateAgent",
-          "when": "view == sf.agent.combined.view && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:canResetAgentView && !agentforceDX:agentSelected",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:canResetAgentView && !agentforceDX:agentSelected",
           "group": "navigation@1"
         },
         {
           "command": "sf.agent.combined.view.activateVersion",
-          "when": "view == sf.agent.combined.view && agentforceDX:agentSelected && !agentforceDX:isScriptAgent && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:sessionError",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && agentforceDX:agentSelected && !agentforceDX:isScriptAgent && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:sessionError",
           "group": "navigation@2"
         },
         {
           "command": "sf.agent.combined.view.clearLoadedSession",
-          "when": "view == sf.agent.combined.view && agentforceDX:hasLoadedSession && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:canResetAgentView && !agentforceDX:sessionError",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && agentforceDX:hasLoadedSession && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:canResetAgentView && !agentforceDX:sessionError",
           "group": "navigation@4"
         },
         {
           "command": "sf.agent.combined.view.refreshAgents",
-          "when": "view == sf.agent.combined.view && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:canResetAgentView",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:canResetAgentView",
           "group": "navigation@0"
         },
         {
           "command": "sf.agent.combined.view.resetAgentView",
-          "when": "view == sf.agent.combined.view && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && agentforceDX:agentSelected && agentforceDX:canResetAgentView",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && !agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && agentforceDX:agentSelected && agentforceDX:canResetAgentView",
           "group": "navigation@0"
         },
         {
           "submenu": "sf.agent.combined.view.restartMenu",
-          "when": "view == sf.agent.combined.view && agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && agentforceDX:agentSelected && agentforceDX:isScriptAgent",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && agentforceDX:agentSelected && agentforceDX:isScriptAgent",
           "group": "navigation@-3"
         },
         {
           "command": "sf.agent.combined.view.debug",
-          "when": "view == sf.agent.combined.view && agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:debugMode && agentforceDX:isLiveMode",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && !agentforceDX:debugMode && agentforceDX:isLiveMode",
           "group": "navigation@-2"
         },
         {
           "command": "sf.agent.combined.view.debugStop",
-          "when": "view == sf.agent.combined.view && agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && agentforceDX:debugMode && agentforceDX:isLiveMode",
+          "when": "view == sf.agent.combined.view && !agentforceDX:authError && agentforceDX:sessionActive && !agentforceDX:sessionStarting && !agentforceDX:sessionStopping && agentforceDX:debugMode && agentforceDX:isLiveMode",
           "group": "navigation@-2"
         },
         {

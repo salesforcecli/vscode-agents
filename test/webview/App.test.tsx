@@ -15,7 +15,7 @@
  */
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock vscodeApi before importing App
@@ -32,6 +32,7 @@ const mockVscodeApi = {
   clearMessages: jest.fn(),
   getConfiguration: jest.fn(),
   executeCommand: jest.fn(),
+  openUrl: jest.fn(),
   setSelectedAgentId: jest.fn(),
   loadAgentHistory: jest.fn(),
   setLiveMode: jest.fn(),
@@ -1143,6 +1144,94 @@ describe('App', () => {
       await waitFor(() => {
         expect(screen.getByTestId('agent-preview')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Auth Error Screen', () => {
+    it('should show auth error screen when authError message is received', async () => {
+      render(<App />);
+
+      act(() => {
+        triggerMessage('authError', { message: 'Unable to connect to org', details: 'Set a new default org or re-authenticate to continue.' });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Unable to connect to org')).toBeInTheDocument();
+        expect(screen.getByText('Set a new default org or re-authenticate to continue.')).toBeInTheDocument();
+        expect(screen.getByText('Select Another Org')).toBeInTheDocument();
+      });
+    });
+
+    it('should hide agent selector when auth error is shown', async () => {
+      render(<App />);
+
+      act(() => {
+        triggerMessage('authError', { message: 'Unable to connect to org' });
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('agent-selector')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should execute sf.set.default.org when Select Another Org is clicked', async () => {
+      render(<App />);
+
+      act(() => {
+        triggerMessage('authError', { message: 'Unable to connect to org' });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Select Another Org')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Select Another Org'));
+
+      expect(mockVscodeApi.executeCommand).toHaveBeenCalledWith('sf.set.default.org');
+    });
+
+    it('should clear auth error when refreshAgents message is received', async () => {
+      render(<App />);
+
+      act(() => {
+        triggerMessage('authError', { message: 'Unable to connect to org' });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Unable to connect to org')).toBeInTheDocument();
+      });
+
+      act(() => {
+        triggerMessage('refreshAgents', undefined);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Unable to connect to org')).not.toBeInTheDocument();
+        expect(screen.getByTestId('agent-selector')).toBeInTheDocument();
+      });
+    });
+
+    it('should show Enable Agentforce button when setupUrl is provided', async () => {
+      render(<App />);
+
+      act(() => {
+        triggerMessage('authError', {
+          message: 'Agentforce is not enabled',
+          details: 'This org doesn\'t have Agentforce enabled. You can enable it or switch to another org.',
+          setupUrl: 'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home'
+        });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Agentforce is not enabled')).toBeInTheDocument();
+        expect(screen.getByText('Enable Agentforce')).toBeInTheDocument();
+        expect(screen.getByText('Select Another Org')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Enable Agentforce'));
+      expect(mockVscodeApi.openUrl).toHaveBeenCalledWith(
+        'https://myorg.salesforce.com/lightning/setup/EinsteinCopilot/home'
+      );
     });
   });
 });
