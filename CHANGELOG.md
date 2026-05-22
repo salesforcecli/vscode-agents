@@ -1,3 +1,9 @@
+## [1.17.1](https://github.com/salesforcecli/vsode-agents/compare/v1.17.0...v1.17.1) (2026-05-22)
+
+### Bug Fixes
+
+- show connection error screen when org auth fails @W-22584848@ ([#211](https://github.com/salesforcecli/vsode-agents/issues/211)) ([d427e10](https://github.com/salesforcecli/vsode-agents/commit/d427e103787452b6d76bfbc7f19b2f86eac396d5))
+
 # [1.17.0](https://github.com/salesforcecli/vsode-agents/compare/v1.16.2...v1.17.0) (2026-05-18)
 
 ### Features
