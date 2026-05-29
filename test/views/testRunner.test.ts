@@ -117,7 +117,7 @@ describe('AgentTestRunner', () => {
   });
 
   describe('displayTestDetails with FAILED status', () => {
-    it('should display Job Id and Status for Agentforce Studio test with individual test case', () => {
+    it('should display test case details for Agentforce Studio test with individual test case', () => {
       const testGroup = new AgentTestGroupNode('TestGroup');
       const testNode = new AgentTestNode('#1');
       testNode.parentName = 'TestGroup';
@@ -143,8 +143,8 @@ describe('AgentTestRunner', () => {
 
       testRunner.displayTestDetails(testNode);
 
-      expect(channelService.appendLine).toHaveBeenCalledWith('Job Id: test-run-id');
-      expect(channelService.appendLine).toHaveBeenCalledWith('FAILED');
+      expect(channelService.appendLine).toHaveBeenCalledWith('CASE #1');
+      expect(channelService.appendLine).toHaveBeenCalledWith('❯ QUALITY: PASS ✅');
     });
   });
 

@@ -81,7 +81,9 @@ export class AgentTestRunner {
    * Displays error message when test results contain no test cases
    */
   private handleEmptyTestCases(channelService: ReturnType<typeof CoreExtensionService.getTestChannelService>): void {
-    channelService.appendLine('We are unable to complete this test run because the test results do not contain any test cases.');
+    channelService.appendLine(
+      'We are unable to complete this test run because the test results do not contain any test cases.'
+    );
   }
 
   /**
@@ -121,9 +123,6 @@ export class AgentTestRunner {
       if (test instanceof AgentTestNode) {
         testInfo.testCases = testInfo.testCases.filter(f => `#${f.testNumber}` === test.name);
       }
-      channelService.appendLine(`Job Id: ${testInfo.id}`);
-      channelService.appendLine(testInfo.status);
-      channelService.appendLine('');
       this.displayAgentforceStudioTestCases(testInfo);
       return;
     }
