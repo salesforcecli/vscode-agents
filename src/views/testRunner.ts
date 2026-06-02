@@ -77,6 +77,33 @@ export class AgentTestRunner {
   private agentforceStudioTestGroupNameToResult = new Map<string, AgentforceStudioTestResults>();
   constructor(private testOutline: AgentTestOutlineProvider) {}
 
+  /**
+   * Displays error message when test results contain no test cases
+   */
+  private handleEmptyTestCases(channelService: ReturnType<typeof CoreExtensionService.getTestChannelService>): void {
+    channelService.appendLine(
+      'We are unable to complete this test run because the test results do not contain any test cases.'
+    );
+  }
+
+  /**
+   * Analyzes test result status to determine if it represents a failure
+   */
+  private isFailedStatus(status: string): boolean {
+    return status.toUpperCase() === 'FAILED';
+  }
+
+  /**
+   * Updates the outcome of a specific test case in the test outline
+   */
+  private updateTestCaseOutcome(testGroupName: string, testNumber: number, outcome: 'ERROR' | 'COMPLETED'): void {
+    this.testOutline
+      .getTestGroup(testGroupName)
+      ?.getChildren()
+      .find(child => child.name === `#${testNumber}`)
+      ?.updateOutcome(outcome);
+  }
+
   public displayTestDetails(test: TestNode) {
     const channelService = CoreExtensionService.getTestChannelService();
     channelService.showChannelOutput();
@@ -124,6 +151,12 @@ export class AgentTestRunner {
       // filter to selected test case
       testInfo.testCases = testInfo.testCases.filter(f => `#${f.testNumber}` === test.name);
     }
+
+    if (testInfo.testCases.length === 0) {
+      this.handleEmptyTestCases(channelService);
+      return;
+    }
+
     testInfo.testCases.forEach(tc => {
       channelService.appendLine('════════════════════════════════════════════════════════════════════════');
       channelService.appendLine(`CASE #${tc.testNumber} - ${testInfo.subjectName}`);
@@ -264,18 +297,21 @@ export class AgentTestRunner {
     };
 
     this.testGroupNameToResult.set(test.name, result);
-    this.testOutline.getTestGroup(test.name)?.updateOutcome('IN_PROGRESS', true);
-    let hasFailure = false;
-    result.testCases.forEach(tc => {
-      const tcFailed = tc.testResults.some(tr => tr.result === 'FAILURE');
-      if (tcFailed) hasFailure = true;
-      this.testOutline
-        .getTestGroup(test.name)
-        ?.getChildren()
-        .find(child => child.name === `#${tc.testNumber}`)
-        ?.updateOutcome(tcFailed ? 'ERROR' : 'COMPLETED');
-    });
-    this.testOutline.getTestGroup(test.name)?.updateOutcome(hasFailure ? 'ERROR' : 'COMPLETED');
+
+    const isFailed = this.isFailedStatus(result.status);
+    let hasFailure = isFailed;
+
+    if (result.testCases.length === 0) {
+      // If there are no test cases, mark test group and children as ERROR
+      this.testOutline.getTestGroup(test.name)?.updateOutcome('ERROR', true);
+    } else {
+      result.testCases.forEach(tc => {
+        const tcFailed = tc.testResults.some(tr => tr.result === 'FAILURE');
+        if (tcFailed) hasFailure = true;
+        this.updateTestCaseOutcome(test.name, tc.testNumber, tcFailed || isFailed ? 'ERROR' : 'COMPLETED');
+      });
+      this.testOutline.getTestGroup(test.name)?.updateOutcome(hasFailure ? 'ERROR' : 'COMPLETED');
+    }
     this.printTestSummary(result);
   }
 
@@ -294,27 +330,34 @@ export class AgentTestRunner {
     };
 
     this.agentforceStudioTestGroupNameToResult.set(test.name, result);
-    this.testOutline.getTestGroup(test.name)?.updateOutcome('IN_PROGRESS', true);
 
-    let hasFailure = false;
-    result.testCases.forEach(tc => {
-      // A test case with no scorer results has not been evaluated and counts as a failure
-      const tcFailed =
-        tc.testScorerResults.length === 0 ||
-        tc.testScorerResults.some(s => !parseAgentforceStudioScorer(s.scorerResponse).passing);
-      if (tcFailed) hasFailure = true;
-      this.testOutline
-        .getTestGroup(test.name)
-        ?.getChildren()
-        .find(child => child.name === `#${tc.testNumber}`)
-        ?.updateOutcome(tcFailed ? 'ERROR' : 'COMPLETED');
-    });
-    this.testOutline.getTestGroup(test.name)?.updateOutcome(hasFailure ? 'ERROR' : 'COMPLETED');
+    const isFailed = this.isFailedStatus(result.status);
+    let hasFailure = isFailed;
+
+    if (result.testCases.length === 0) {
+      // If there are no test cases, mark test group and children as ERROR
+      this.testOutline.getTestGroup(test.name)?.updateOutcome('ERROR', true);
+    } else {
+      result.testCases.forEach(tc => {
+        // A test case with no scorer results has not been evaluated and counts as a failure
+        const tcFailed =
+          tc.testScorerResults.length === 0 ||
+          tc.testScorerResults.some(s => !parseAgentforceStudioScorer(s.scorerResponse).passing);
+        if (tcFailed) hasFailure = true;
+        this.updateTestCaseOutcome(test.name, tc.testNumber, tcFailed || isFailed ? 'ERROR' : 'COMPLETED');
+      });
+      this.testOutline.getTestGroup(test.name)?.updateOutcome(hasFailure ? 'ERROR' : 'COMPLETED');
+    }
     this.printAgentforceStudioTestSummary(result);
   }
 
   private displayAgentforceStudioTestCases(testInfo: AgentforceStudioTestResults): void {
     const channelService = CoreExtensionService.getTestChannelService();
+
+    if (testInfo.testCases.length === 0) {
+      this.handleEmptyTestCases(channelService);
+      return;
+    }
 
     testInfo.testCases.forEach(tc => {
       channelService.appendLine('════════════════════════════════════════════════════════════════════════');
@@ -360,6 +403,12 @@ export class AgentTestRunner {
     const channelService = CoreExtensionService.getTestChannelService();
     channelService.appendLine(result.status);
     channelService.appendLine('');
+
+    if (result.testCases.length === 0) {
+      this.handleEmptyTestCases(channelService);
+      return;
+    }
+
     channelService.appendLine('Test Results');
     const total = result.testCases.length;
     const passing = result.testCases.filter(tc => tc.testResults.every(tr => tr.result === 'PASS')).length;
@@ -371,11 +420,17 @@ export class AgentTestRunner {
 
   private printAgentforceStudioTestSummary(result: AgentforceStudioTestResults): void {
     const channelService = CoreExtensionService.getTestChannelService();
+    channelService.appendLine(result.status);
+    channelService.appendLine('');
+
+    if (result.testCases.length === 0) {
+      this.handleEmptyTestCases(channelService);
+      return;
+    }
+
     const tcPassing = (tc: (typeof result.testCases)[number]): boolean =>
       tc.testScorerResults.length > 0 &&
       tc.testScorerResults.every(s => parseAgentforceStudioScorer(s.scorerResponse).passing);
-    channelService.appendLine(result.status);
-    channelService.appendLine('');
     channelService.appendLine('Test Results');
     const total = result.testCases.length;
     const passing = result.testCases.filter(tcPassing).length;
