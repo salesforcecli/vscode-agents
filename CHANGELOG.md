@@ -1,3 +1,10 @@
+## [1.17.2](https://github.com/salesforcecli/vsode-agents/compare/v1.17.1...v1.17.2) (2026-06-02)
+
+### Bug Fixes
+
+- improve empty testCases array handling and FAILED status display @W-22698137@ ([28092ab](https://github.com/salesforcecli/vsode-agents/commit/28092ab2ce46b46668ce8ee421f204a36a298277))
+- remove Job Id/Status display for individual Agentforce Studio test cases ([93ca8f7](https://github.com/salesforcecli/vsode-agents/commit/93ca8f7114d3ced6914d9384b560b0723cf955eb))
+
 ## [1.17.1](https://github.com/salesforcecli/vsode-agents/compare/v1.17.0...v1.17.1) (2026-05-22)
 
 ### Bug Fixes
