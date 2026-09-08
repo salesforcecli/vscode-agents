@@ -2,6 +2,22 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        // Transpile-only mode: type-only imports (e.g. `import type { ApexLog }
+        // from '@salesforce/types/tooling'`) are elided so ts-jest doesn't trip
+        // over `exports` subpaths it can't resolve under CommonJS. Full type
+        // checking still runs in the `compile` (tsc --build) gate. Set as a
+        // compilerOption (scoped to ts-jest) rather than the deprecated ts-jest
+        // `isolatedModules` option.
+        tsconfig: {
+          isolatedModules: true
+        }
+      }
+    ]
+  },
   testMatch: ['**/test/**/?(*.)+(spec|test).[t]s?(x)'],
   setupFilesAfterEnv: ['./scripts/setup-jest.ts'],
   testPathIgnorePatterns: [

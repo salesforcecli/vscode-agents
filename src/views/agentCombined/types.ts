@@ -1,4 +1,4 @@
-import { AgentSource, PreviewableAgent, ProductionAgent, ScriptAgent } from '@salesforce/agents';
+import { PreviewableAgent, ProductionAgent, ScriptAgent } from '@salesforce/agents';
 import type { TraceHistoryEntry } from '../../utils/traceHistory';
 
 /**

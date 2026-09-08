@@ -20,6 +20,18 @@ import { SfError } from '@salesforce/core';
 export type LogLevel = 'error' | 'warn' | 'debug';
 
 /**
+ * Additional, loosely-typed fields that may appear on API/HTTP-style errors
+ * (e.g. from jsforce) but are not part of the `SfError` type definition.
+ */
+interface ErrorWithApiDetails {
+  data?: unknown;
+  response?: unknown;
+  body?: unknown;
+  statusCode?: unknown;
+  code?: unknown;
+}
+
+/**
  * Formats a log message with timestamp and status indicator
  * Format: [MM-DD-YYYY HH:MM:SS.sss] [STATUS] message
  */
@@ -64,27 +76,27 @@ export class Logger {
       }
 
       // Try to extract API response data from SfError
-      const errorAny = error as any;
-      if (errorAny.data || errorAny.response || errorAny.body) {
+      const errorDetails: ErrorWithApiDetails = error;
+      if (errorDetails.data || errorDetails.response || errorDetails.body) {
         this.channelService.appendLine(formatLogMessage('error', '  API Response:'));
         try {
-          const responseData = errorAny.data || errorAny.response || errorAny.body;
+          const responseData = errorDetails.data || errorDetails.response || errorDetails.body;
           const responseStr = typeof responseData === 'string' ? responseData : JSON.stringify(responseData, null, 2);
           // Indent each line of the response
           responseStr.split('\n').forEach(line => {
             this.channelService.appendLine(formatLogMessage('error', `    ${line}`));
           });
-        } catch (e) {
+        } catch {
           this.channelService.appendLine(
-            formatLogMessage('error', `    ${String(errorAny.data || errorAny.response || errorAny.body)}`)
+            formatLogMessage('error', `    ${String(errorDetails.data || errorDetails.response || errorDetails.body)}`)
           );
         }
       }
 
       // Log status code if available
-      if (errorAny.statusCode || errorAny.code) {
+      if (errorDetails.statusCode || errorDetails.code) {
         this.channelService.appendLine(
-          formatLogMessage('error', `  Status Code: ${errorAny.statusCode || errorAny.code}`)
+          formatLogMessage('error', `  Status Code: ${errorDetails.statusCode || errorDetails.code}`)
         );
       }
 

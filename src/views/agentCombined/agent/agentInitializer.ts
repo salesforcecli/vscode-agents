@@ -86,7 +86,7 @@ export class AgentInitializer {
         }
         aabDirectory = path.resolve(authoringBundle);
       }
-    } catch (error) {
+    } catch {
       // If stat fails, it might be just a name (aabName), not a path
       // Check if it's a .agent file path
       if (normalizedPath.endsWith('.agent')) {

@@ -15,7 +15,6 @@
  */
 import { satisfies, valid } from 'semver';
 import { Event, ExtensionContext, extensions, window } from 'vscode';
-import { EXTENSION_NAME } from '../consts';
 import { ChannelService } from '../types';
 import { TelemetryService } from '../types/TelemetryService';
 import { CoreExtensionApi } from '../types/CoreExtension';
@@ -112,7 +111,7 @@ export class CoreExtensionService {
     if (!telemetryService) {
       throw new Error(TELEMETRY_SERVICE_NOT_FOUND);
     }
-    const { aiKey, name, version } = context.extension.packageJSON;
+    const { aiKey, version } = context.extension.packageJSON;
     // Use "AgentforceDX" as the extension name for telemetry
     const extensionName = 'AgentforceDX';
     CoreExtensionService.telemetryService = telemetryService.getInstance(extensionName);

@@ -145,7 +145,7 @@ export const registerCreateAiAuthoringBundleCommand = () => {
       const aiAuthoringBundlesDir = path.join(targetDir, 'aiAuthoringBundles');
       try {
         await vscode.workspace.fs.createDirectory(vscode.Uri.file(aiAuthoringBundlesDir));
-      } catch (error) {
+      } catch {
         // Directory might already exist, which is fine
       }
 
@@ -164,7 +164,7 @@ export const registerCreateAiAuthoringBundleCommand = () => {
               !fileName.includes('-testSpec')
           )
           .map(([fileName]) => fileName);
-      } catch (error) {
+      } catch {
         logger.warn(`No agent spec directory found at ${specsDir}.`);
       }
 

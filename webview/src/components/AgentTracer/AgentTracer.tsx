@@ -19,6 +19,45 @@ interface AgentTracerProps {
   onLiveModeChange?: (isLive: boolean) => void;
 }
 
+interface TraceStepFunctionData {
+  name?: string;
+  output?: unknown;
+}
+
+interface TraceStepData {
+  agent_name?: string;
+  directive_context?: string;
+  enabled_tools?: unknown[];
+  execution_latency?: number;
+  variable_updates?: Array<{ variable_name?: string }>;
+  from_agent?: string;
+  to_agent?: string;
+  [key: string]: unknown;
+}
+
+// A single step within a trace plan. Step shapes vary by `type`/`stepType`,
+// so most fields are optional; the index signature allows for additional
+// fields we don't explicitly model but may still surface (e.g. via
+// JSON.stringify-based filtering).
+export interface TracePlanStep {
+  type?: string;
+  stepType?: string;
+  name?: string;
+  label?: string;
+  description?: string;
+  message?: string;
+  data?: TraceStepData;
+  reason?: string;
+  topic?: string;
+  responseType?: string;
+  isContentSafe?: boolean;
+  safetyScore?: number;
+  function?: TraceStepFunctionData;
+  generatedResponse?: unknown;
+  instructionAdherence?: string;
+  [key: string]: unknown;
+}
+
 // PlanSuccessResponse format from AgentSimulate.trace()
 interface PlanSuccessResponse {
   type: string;
@@ -26,7 +65,7 @@ interface PlanSuccessResponse {
   sessionId: string;
   intent?: string;
   topic?: string;
-  plan: any[];
+  plan: TracePlanStep[];
 }
 
 export interface TraceHistoryEntry {
@@ -101,7 +140,7 @@ export const selectHistoryEntry = (entries: TraceHistoryEntry[], index: number):
 };
 
 export const translateStepIndexToFiltered = (
-  plan: any[] | undefined,
+  plan: TracePlanStep[] | undefined,
   originalStepIndex: number | null,
   filterQuery: string
 ): number | undefined => {
@@ -128,7 +167,7 @@ export const translateStepIndexToFiltered = (
   return undefined;
 };
 
-export const stepMatchesFilter = (step: any, query: string): boolean => {
+export const stepMatchesFilter = (step: TracePlanStep, query: string): boolean => {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) {
     return true;
@@ -241,7 +280,7 @@ const STEP_ICONS: Record<string, TimelineIconName> = {
 };
 
 // Get the description/subtitle for a step based on its type
-const getStepDescription = (step: any): string | undefined => {
+const getStepDescription = (step: TracePlanStep): string | undefined => {
   const stepType = step.type || step.stepType || '';
 
   switch (stepType) {
@@ -274,7 +313,7 @@ const getStepDescription = (step: any): string | undefined => {
     case 'VariableUpdateStep': {
       const updates = step.data?.variable_updates;
       if (Array.isArray(updates) && updates.length > 0) {
-        const varNames = updates.map((u: any) => u.variable_name).filter(Boolean);
+        const varNames = updates.map(u => u.variable_name).filter(Boolean);
         if (varNames.length === 1) {
           return varNames[0];
         }
@@ -352,7 +391,7 @@ export const buildTimelineItems = (
 
   const trimmedFilter = filterQuery?.trim() ?? '';
 
-  const items = traceData.plan.map((step: any, index: number) => {
+  const items = traceData.plan.map((step, index: number) => {
     const stepType = step.type || step.stepType || '';
     const stepName = step.name || step.label || step.description || '';
 
@@ -391,7 +430,7 @@ export const buildTimelineItems = (
       icon,
       onClick: hasData ? () => onSelect(index) : undefined,
       _step: step
-    } as TimelineItemProps & { _step: any };
+    } as TimelineItemProps & { _step: TracePlanStep };
   });
 
   if (!trimmedFilter) {
@@ -414,7 +453,7 @@ export const getStepData = (traceData: PlanSuccessResponse | null, selectedStepI
   }
 
   // Build a display object with relevant step properties
-  const displayData: Record<string, any> = {};
+  const displayData: Record<string, unknown> = {};
 
   if (step.data) {
     Object.assign(displayData, step.data);
@@ -510,7 +549,7 @@ const AgentTracer: React.FC<AgentTracerProps> = ({
 
   useEffect(() => {
     // Listen for trace data response
-    const disposeTraceData = vscodeApi.onMessage('traceData', data => {
+    const disposeTraceData = vscodeApi.onMessage('traceData', (data: PlanSuccessResponse) => {
       setTraceData(data);
       setLoading(false);
       setError(null);
@@ -525,8 +564,8 @@ const AgentTracer: React.FC<AgentTracerProps> = ({
     });
 
     // Listen for errors
-    const disposeError = vscodeApi.onMessage('error', data => {
-      if (isTraceErrorMessage(data?.message)) {
+    const disposeError = vscodeApi.onMessage('error', (data?: { message?: string }) => {
+      if (data?.message && isTraceErrorMessage(data.message)) {
         setError(data.message);
         setLoading(false);
       }
@@ -553,7 +592,7 @@ const AgentTracer: React.FC<AgentTracerProps> = ({
     // Request trace data when component mounts
     requestTraceData();
 
-    const disposeTraceHistory = vscodeApi.onMessage('traceHistory', data => {
+    const disposeTraceHistory = vscodeApi.onMessage('traceHistory', (data?: { entries?: TraceHistoryEntry[] }) => {
       const entries: TraceHistoryEntry[] = Array.isArray(data?.entries) ? data.entries : [];
 
       // Handle empty state
@@ -602,6 +641,29 @@ const AgentTracer: React.FC<AgentTracerProps> = ({
     }
   }, [isVisible, requestTraceData]);
 
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newHeight = window.innerHeight - e.clientY;
+      if (newHeight >= 100 && newHeight <= window.innerHeight * 0.8) {
+        setPanelHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   if (error) {
     return (
       <div className="agent-tracer">
@@ -630,7 +692,7 @@ const AgentTracer: React.FC<AgentTracerProps> = ({
         if (entryMetadataMatches(entry, trimmedFilter)) {
           return sum + plan.length;
         }
-        return sum + plan.filter((step: any) => stepMatchesFilter(step, trimmedFilter)).length;
+        return sum + plan.filter(step => stepMatchesFilter(step, trimmedFilter)).length;
       }, 0)
     : totalStepCount;
 
@@ -639,29 +701,6 @@ const AgentTracer: React.FC<AgentTracerProps> = ({
     e.preventDefault();
     setIsResizing(true);
   };
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const newHeight = window.innerHeight - e.clientY;
-      if (newHeight >= 100 && newHeight <= window.innerHeight * 0.8) {
-        setPanelHeight(newHeight);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
 
   return (
     <div className="agent-tracer">

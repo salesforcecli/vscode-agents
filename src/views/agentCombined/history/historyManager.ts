@@ -1,6 +1,5 @@
-import { AgentSource } from '@salesforce/agents';
-import { getAllHistory } from '@salesforce/agents/lib/utils';
-import { SfProject } from '@salesforce/core';
+import { AgentSource, PlannerResponse } from '@salesforce/agents';
+import { getAllHistory, type TranscriptEntry } from '@salesforce/agents/lib/utils';
 import type { TraceHistoryEntry } from '../../../utils/traceHistory';
 import * as vscode from 'vscode';
 import type { AgentViewState } from '../state/agentViewState';
@@ -70,7 +69,7 @@ export class HistoryManager {
           return userInputStep.startExecutionTime;
         }
       }
-    } catch (error) {
+    } catch {
       // Fall through to default
     }
     return undefined;
@@ -205,7 +204,7 @@ export class HistoryManager {
     sessionId: string
   ): Promise<void> {
     const agentStorageKey = getAgentStorageKey(agentId, agentSource);
-    let traces: any[] = [];
+    let traces: PlannerResponse[] = [];
     try {
       const history = await getAllHistory(agentStorageKey, sessionId);
       traces = history.traces || [];
@@ -213,12 +212,12 @@ export class HistoryManager {
       console.error('Could not load traces for session:', err);
     }
 
-    const sortedTraces = [...traces].sort((a: any, b: any) => {
+    const sortedTraces = [...traces].sort((a: PlannerResponse, b: PlannerResponse) => {
       const timeA = this.getTraceStartTime(a) ?? Infinity;
       const timeB = this.getTraceStartTime(b) ?? Infinity;
       return timeA - timeB;
     });
-    const traceEntries: TraceHistoryEntry[] = sortedTraces.map((trace: any, index) => {
+    const traceEntries: TraceHistoryEntry[] = sortedTraces.map((trace: PlannerResponse, index) => {
       const planId = trace.planId || `plan-${index}`;
       const startTime = this.getTraceStartTime(trace);
       const timestamp = startTime ? new Date(startTime).toISOString() : new Date().toISOString();
@@ -253,8 +252,8 @@ export class HistoryManager {
     sessionType?: 'simulated' | 'live' | 'published'
   ): Promise<void> {
     const agentStorageKey = getAgentStorageKey(agentId, agentSource);
-    let transcript: any[] = [];
-    let traces: any[] = [];
+    let transcript: TranscriptEntry[] = [];
+    let traces: PlannerResponse[] = [];
     try {
       const history = await getAllHistory(agentStorageKey, sessionId);
       transcript = history.transcript || [];
@@ -263,12 +262,12 @@ export class HistoryManager {
       console.error('Could not load session preview:', err);
     }
 
-    const sortedTraces = [...traces].sort((a: any, b: any) => {
+    const sortedTraces = [...traces].sort((a: PlannerResponse, b: PlannerResponse) => {
       const timeA = this.getTraceStartTime(a) ?? Infinity;
       const timeB = this.getTraceStartTime(b) ?? Infinity;
       return timeA - timeB;
     });
-    const traceEntries: TraceHistoryEntry[] = sortedTraces.map((trace: any, index) => {
+    const traceEntries: TraceHistoryEntry[] = sortedTraces.map((trace: PlannerResponse, index) => {
       const planId = trace.planId || `plan-${index}`;
       const startTime = this.getTraceStartTime(trace);
       const timestamp = startTime ? new Date(startTime).toISOString() : new Date().toISOString();
@@ -359,7 +358,7 @@ export class HistoryManager {
   /**
    * Loads conversation history data without sending to webview
    */
-  private async loadConversationHistoryData(agentId: string, agentSource: AgentSource): Promise<any[]> {
+  private async loadConversationHistoryData(agentId: string, agentSource: AgentSource): Promise<TranscriptEntry[]> {
     try {
       let transcriptEntries;
 

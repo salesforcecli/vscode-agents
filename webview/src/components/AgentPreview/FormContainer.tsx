@@ -3,7 +3,6 @@ import ChatInput, { ChatInputRef } from './ChatInput.js';
 import './FormContainer.css';
 
 // React is required for JSX transform in test environment
-// @ts-ignore - React is used for JSX but not directly referenced
 void React;
 
 interface Message {

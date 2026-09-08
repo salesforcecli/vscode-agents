@@ -40,9 +40,17 @@ function serializer(replacer: unknown, cycleReplacer?: unknown) {
     if (stack.length > 0) {
       // @ts-expect-error because `this` is not typed
       const thisPos = stack.indexOf(this);
-      // @ts-expect-error because `this` is not typed
-      ~thisPos ? stack.splice(thisPos + 1) : stack.push(this);
-      ~thisPos ? keys.splice(thisPos, Number.POSITIVE_INFINITY, key) : keys.push(key);
+      if (~thisPos) {
+        stack.splice(thisPos + 1);
+      } else {
+        // @ts-expect-error because `this` is not typed
+        stack.push(this);
+      }
+      if (~thisPos) {
+        keys.splice(thisPos, Number.POSITIVE_INFINITY, key);
+      } else {
+        keys.push(key);
+      }
       // @ts-expect-error because `this` is not typed
       if (stack.includes(value)) value = cycleReplacer.call(this, key, value);
     } else {

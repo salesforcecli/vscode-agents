@@ -1,5 +1,11 @@
-import { AgentSource, ScriptAgent, ProductionAgent, createPreviewSessionCache } from '@salesforce/agents';
-import { SfError } from '@salesforce/core';
+import type * as vscode from 'vscode';
+import {
+  AgentSource,
+  createPreviewSessionCache,
+  type AgentPreviewMessage,
+  type AgentPreviewStartResponse
+} from '@salesforce/agents';
+import { SfError, Connection, SfProject } from '@salesforce/core';
 import { EOL } from 'os';
 import { CoreExtensionService } from '../../../services/coreExtensionService';
 import type { AgentViewState } from '../state/agentViewState';
@@ -10,7 +16,6 @@ import { Logger } from '../../../utils/logger';
 import { createSessionStartGuards } from './sessionStartGuards';
 import { SessionStartCancelledError } from '../types';
 import { validatePublishedAgentId } from '../agent/agentUtils';
-import { SfProject } from '@salesforce/core';
 
 /**
  * Manages agent session lifecycle (start, end, restart)
@@ -34,7 +39,7 @@ export class SessionManager {
     agentId: string,
     agentSource: AgentSource,
     isLiveMode?: boolean,
-    webviewView?: any
+    webviewView?: vscode.WebviewView
   ): Promise<void> {
     if (!webviewView) {
       throw new Error('Webview is not ready. Please ensure the view is visible.');
@@ -92,7 +97,7 @@ export class SessionManager {
       ensureActive();
 
       // Send session started message
-      const agentMessage = session.messages.find((msg: any) => msg.type === 'Inform');
+      const agentMessage = session.messages.find((msg: AgentPreviewMessage) => msg.type === 'Inform');
       this.messageSender.sendSessionStarted(agentMessage?.message, this.state.sessionId);
       this.state.pendingStartAgentId = undefined;
       this.state.pendingStartAgentSource = undefined;
@@ -132,7 +137,7 @@ export class SessionManager {
     agentSource: AgentSource,
     sessionId: string,
     isLiveMode?: boolean,
-    webviewView?: any
+    webviewView?: vscode.WebviewView
   ): Promise<void> {
     if (!webviewView) {
       throw new Error('Webview is not ready. Please ensure the view is visible.');
@@ -429,7 +434,11 @@ export class SessionManager {
   /**
    * Common completion for restart operations
    */
-  private async completeRestart(session: any, logMessage: string, ensureActive?: () => void): Promise<void> {
+  private async completeRestart(
+    session: AgentPreviewStartResponse,
+    logMessage: string,
+    ensureActive?: () => void
+  ): Promise<void> {
     if (this.state.currentAgentId && this.state.currentAgentSource) {
       await this.historyManager.loadAndSendTraceHistory(this.state.currentAgentId, this.state.currentAgentSource);
     }
@@ -439,7 +448,7 @@ export class SessionManager {
     await this.state.setSessionStarting(false);
     ensureActive?.();
 
-    const agentMessage = session.messages.find((msg: any) => msg.type === 'Inform');
+    const agentMessage = session.messages.find((msg: AgentPreviewMessage) => msg.type === 'Inform');
     this.messageSender.sendSessionStarted(agentMessage?.message, this.state.sessionId);
     await this.state.setConversationDataAvailable(true);
 
@@ -486,8 +495,8 @@ export class SessionManager {
    */
   private async initializeScriptAgent(
     agentId: string,
-    conn: any,
-    project: any,
+    conn: Connection,
+    project: SfProject,
     isLiveMode: boolean | undefined,
     isActive: () => boolean,
     ensureActive: () => void
@@ -549,8 +558,8 @@ export class SessionManager {
    */
   private async initializePublishedAgent(
     agentId: string,
-    conn: any,
-    project: any,
+    conn: Connection,
+    project: SfProject,
     ensureActive: () => void
   ): Promise<void> {
     // Validate agent ID format - only validate if it looks like a Bot ID

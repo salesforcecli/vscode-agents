@@ -14,6 +14,28 @@ interface SelectAgentMessage {
   agentSource?: string;
 }
 
+interface PreviewSessionInfo {
+  sessionId: string;
+  sessionType?: 'simulated' | 'live' | 'published';
+}
+
+interface SetConversationData {
+  previewSessionInfo?: PreviewSessionInfo;
+  messages?: unknown[];
+}
+
+interface SessionStartedData {
+  sessionId?: string;
+}
+
+interface SessionEndedData {
+  previewSessionInfo?: PreviewSessionInfo;
+}
+
+interface SessionStartingData {
+  message?: string;
+}
+
 declare global {
   interface Window {
     __agentforceDXAppTestHooks?: {
@@ -45,6 +67,7 @@ const App: React.FC = () => {
   const sessionChangeQueueRef = useRef(Promise.resolve());
   const displayedAgentIdRef = useRef<string>('');
   const desiredAgentIdRef = useRef<string>('');
+  const activeTabRef = useRef<'preview' | 'tracer' | 'history'>('preview');
   const forceRestartRef = useRef(false);
   const sessionActiveRef = useRef(false);
   const isSessionTransitioningRef = useRef(false);
@@ -59,6 +82,10 @@ const App: React.FC = () => {
   useEffect(() => {
     desiredAgentIdRef.current = desiredAgentId;
   }, [desiredAgentId]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   useEffect(() => {
     isSessionTransitioningRef.current = isSessionTransitioning;
@@ -174,6 +201,13 @@ const App: React.FC = () => {
       disposeTestGetTrace();
       disposeTestSwitchTab();
     };
+    // isLiveMode is intentionally omitted: this effect registers message listeners
+    // once on mount, and the testStartSession handler already falls back to the
+    // latest isLiveMode via closure only when the test payload omits it. Adding
+    // isLiveMode here would tear down and re-register all listeners (plus
+    // re-request getInitialLiveMode) on every live-mode toggle, which would
+    // change behavior.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleTabChange = (tab: 'preview' | 'tracer' | 'history') => {
@@ -195,7 +229,7 @@ const App: React.FC = () => {
   }, [isSessionStarting]);
 
   useEffect(() => {
-    return vscodeApi.onMessage('setConversation', (data: any) => {
+    return vscodeApi.onMessage('setConversation', (data?: SetConversationData) => {
       const info = data?.previewSessionInfo;
       const messages = Array.isArray(data?.messages) ? data.messages : [];
       if (info && typeof info.sessionId === 'string') {
@@ -237,7 +271,7 @@ const App: React.FC = () => {
 
   // Switch to preview tab when the agent changes while viewing history
   useEffect(() => {
-    if (activeTab === 'history') {
+    if (activeTabRef.current === 'history') {
       setActiveTab('preview');
     }
   }, [desiredAgentId]);
@@ -297,7 +331,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const disposeSessionStarted = vscodeApi.onMessage('sessionStarted', (data: any) => {
+    const disposeSessionStarted = vscodeApi.onMessage('sessionStarted', (data?: SessionStartedData) => {
       sessionActiveRef.current = true;
       setIsSessionActive(true);
       setIsSessionStarting(false);
@@ -311,7 +345,7 @@ const App: React.FC = () => {
       }
     });
 
-    const disposeSessionEnded = vscodeApi.onMessage('sessionEnded', (data: any) => {
+    const disposeSessionEnded = vscodeApi.onMessage('sessionEnded', (data?: SessionEndedData) => {
       sessionActiveRef.current = false;
       isSessionStartingRef.current = false;
       setIsSessionActive(false);
@@ -339,7 +373,7 @@ const App: React.FC = () => {
       }
     });
 
-    const disposeSessionStarting = vscodeApi.onMessage('sessionStarting', (data: any) => {
+    const disposeSessionStarting = vscodeApi.onMessage('sessionStarting', (data?: SessionStartingData) => {
       sessionActiveRef.current = false;
       // Update the ref synchronously so the setConversation listener (which
       // may fire on the same message-bus tick) sees the new value before

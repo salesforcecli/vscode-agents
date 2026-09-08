@@ -9,7 +9,10 @@ export interface Tab {
 
 interface TabNavigationProps {
   activeTab: number | 'preview' | 'tracer' | 'history';
-  onTabChange: (tab: any) => void;
+  // Method shorthand (rather than a property-typed function) so callers that only
+  // ever pass one branch of this union (e.g. App.tsx's string-only handler) remain
+  // assignable under TS's bivariant method-parameter checking.
+  onTabChange(tab: number | 'preview' | 'tracer' | 'history'): void;
   showTracerTab?: boolean;
   showHistoryTab?: boolean;
   tabs?: Tab[];
@@ -48,7 +51,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
         });
       }
     }
-  }, [activeTab, isCustomTabs, tabs]);
+  }, [activeTab, isCustomTabs]);
 
   React.useEffect(() => {
     updateIndicator();
@@ -67,7 +70,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [updateIndicator]);
 
-  const handleTabClick = (tab: any) => {
+  const handleTabClick = (tab: number | 'preview' | 'tracer' | 'history') => {
     onTabChange(tab);
   };
 
@@ -80,7 +83,9 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
             {tabs.map((tab, index) => (
               <button
                 key={tab.id}
-                ref={el => (tabRefs.current[index.toString()] = el)}
+                ref={el => {
+                  tabRefs.current[index.toString()] = el;
+                }}
                 className={`tab ${activeTab === index ? 'active' : ''}`}
                 onClick={() => handleTabClick(index)}
               >
@@ -93,7 +98,9 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
           // Render default tabs
           <>
             <button
-              ref={el => (tabRefs.current['preview'] = el)}
+              ref={el => {
+                tabRefs.current['preview'] = el;
+              }}
               className={`tab ${activeTab === 'preview' ? 'active' : ''}`}
               onClick={() => handleTabClick('preview')}
             >
@@ -105,7 +112,9 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
             </button>
             {showTracerTab && (
               <button
-                ref={el => (tabRefs.current['tracer'] = el)}
+                ref={el => {
+                  tabRefs.current['tracer'] = el;
+                }}
                 className={`tab ${activeTab === 'tracer' ? 'active' : ''}`}
                 onClick={() => handleTabClick('tracer')}
               >
@@ -118,7 +127,9 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
             )}
             {showHistoryTab && (
               <button
-                ref={el => (tabRefs.current['history'] = el)}
+                ref={el => {
+                  tabRefs.current['history'] = el;
+                }}
                 className={`tab ${activeTab === 'history' ? 'active' : ''}`}
                 onClick={() => handleTabClick('history')}
               >
