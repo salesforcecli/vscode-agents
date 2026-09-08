@@ -32,7 +32,45 @@ export interface AgentPreviewRef {
   sendMessage?: (message: string) => void;
 }
 
-export const normalizeHistoryMessage = (msg: any): Message => ({
+interface HistoryMessagePayload {
+  id?: string;
+  type?: 'user' | 'agent';
+  content?: string;
+  timestamp?: string;
+}
+
+interface ConversationHistoryData {
+  messages?: HistoryMessagePayload[];
+}
+
+interface SetConversationData {
+  messages?: HistoryMessagePayload[];
+  showPlaceholder?: boolean;
+}
+
+interface NoHistoryFoundData {
+  agentId?: string;
+}
+
+interface SessionStartedData {
+  skipWelcome?: boolean;
+  content?: string;
+}
+
+interface MessagePayload {
+  message?: string;
+}
+
+interface MessageSentData {
+  content?: string;
+}
+
+interface ErrorData {
+  message?: string;
+  details?: string;
+}
+
+export const normalizeHistoryMessage = (msg: HistoryMessagePayload): Message => ({
   id: msg?.id || `${msg?.timestamp ?? 'history'}-${Date.now()}`,
   type: msg?.type as 'user' | 'agent',
   content: msg?.content || '',
@@ -171,7 +209,7 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       });
       disposers.push(disposeClearMessages);
 
-      const disposeConversationHistory = vscodeApi.onMessage('conversationHistory', data => {
+      const disposeConversationHistory = vscodeApi.onMessage('conversationHistory', (data?: ConversationHistoryData) => {
         if (data && Array.isArray(data.messages) && data.messages.length > 0) {
           const historyMessages: Message[] = data.messages.map(normalizeHistoryMessage);
           setMessages(historyMessages);
@@ -189,7 +227,7 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
 
       // Atomic conversation state update - replaces separate clearMessages + conversationHistory
       // to avoid visual blink from sequential state updates
-      const disposeSetConversation = vscodeApi.onMessage('setConversation', data => {
+      const disposeSetConversation = vscodeApi.onMessage('setConversation', (data?: SetConversationData) => {
         // Atomically update all conversation-related state in one render
         const historyMessages: Message[] =
           data && Array.isArray(data.messages) ? data.messages.map(normalizeHistoryMessage) : [];
@@ -213,7 +251,7 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       });
       disposers.push(disposeSetConversation);
 
-      const disposeNoHistoryFound = vscodeApi.onMessage('noHistoryFound', data => {
+      const disposeNoHistoryFound = vscodeApi.onMessage('noHistoryFound', (data?: NoHistoryFoundData) => {
         // No history found - show placeholder instead of auto-starting
         if (data && data.agentId) {
           setShowPlaceholder(true);
@@ -223,7 +261,7 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       disposers.push(disposeNoHistoryFound);
 
 
-      const disposeSessionStarted = vscodeApi.onMessage('sessionStarted', data => {
+      const disposeSessionStarted = vscodeApi.onMessage('sessionStarted', (data?: SessionStartedData) => {
         const timeSinceError = Date.now() - sessionErrorTimestampRef.current;
         if (sessionErrorTimestampRef.current > 0 && timeSinceError < 500) {
           console.warn('Ignoring sessionStarted that arrived too soon after error (race condition)');
@@ -259,7 +297,7 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       });
       disposers.push(disposeSessionStarted);
 
-      const disposeSessionStarting = vscodeApi.onMessage('sessionStarting', (data: any) => {
+      const disposeSessionStarting = vscodeApi.onMessage('sessionStarting', (data?: MessagePayload) => {
         const currentSelectedAgentId = selectedAgentIdRef.current;
         const currentPendingAgentId = pendingAgentIdRef.current;
         const explicitMessage = typeof data?.message === 'string' ? data.message : undefined;
@@ -290,13 +328,13 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       });
       disposers.push(disposeSessionStarting);
 
-      const disposeCompilationStarting = vscodeApi.onMessage('compilationStarting', data => {
+      const disposeCompilationStarting = vscodeApi.onMessage('compilationStarting', (data?: MessagePayload) => {
         setIsLoading(true);
         setLoadingMessage(data?.message || 'Compiling agent...');
       });
       disposers.push(disposeCompilationStarting);
 
-      const disposeCompilationError = vscodeApi.onMessage('compilationError', data => {
+      const disposeCompilationError = vscodeApi.onMessage('compilationError', (data?: MessagePayload) => {
         setIsLoading(false);
         setAgentConnected(false);
         sessionActiveStateRef.current = false;
@@ -309,13 +347,13 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       });
       disposers.push(disposeCompilationError);
 
-      const disposeSimulationStarting = vscodeApi.onMessage('simulationStarting', data => {
+      const disposeSimulationStarting = vscodeApi.onMessage('simulationStarting', (data?: MessagePayload) => {
         setIsLoading(true);
         setLoadingMessage(data?.message || 'Starting simulation...');
       });
       disposers.push(disposeSimulationStarting);
 
-      const disposeMessageSent = vscodeApi.onMessage('messageSent', data => {
+      const disposeMessageSent = vscodeApi.onMessage('messageSent', (data?: MessageSentData) => {
         if (data && data.content) {
           const agentMessage: Message = {
             id: Date.now().toString(),
@@ -336,7 +374,7 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       });
       disposers.push(disposeMessageStarting);
 
-      const disposeError = vscodeApi.onMessage('error', data => {
+      const disposeError = vscodeApi.onMessage('error', (data?: ErrorData) => {
         setAgentConnected(false);
         sessionActiveStateRef.current = false;
         sessionErrorTimestampRef.current = Date.now();
@@ -364,7 +402,7 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       });
       disposers.push(disposeSessionEnded);
 
-      const disposeDebugLogProcessed = vscodeApi.onMessage('debugLogProcessed', data => {
+      const disposeDebugLogProcessed = vscodeApi.onMessage('debugLogProcessed', (data?: MessagePayload) => {
         const logMessage = createSystemMessage(data?.message, 'debug');
         if (logMessage) {
           setMessages(prev => [...prev, logMessage]);
@@ -372,7 +410,7 @@ const AgentPreview = forwardRef<AgentPreviewRef, AgentPreviewProps>(
       });
       disposers.push(disposeDebugLogProcessed);
 
-      const disposeDebugLogError = vscodeApi.onMessage('debugLogError', data => {
+      const disposeDebugLogError = vscodeApi.onMessage('debugLogError', (data?: MessagePayload) => {
         const errorMessage = createSystemMessage(data?.message, 'error');
         if (errorMessage) {
           setMessages(prev => [...prev, errorMessage]);

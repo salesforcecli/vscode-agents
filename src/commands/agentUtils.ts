@@ -191,7 +191,7 @@ async function findBotMetaXmlInDirectory(directoryPath: string): Promise<string 
       return botMetaFile[0].replace('.bot-meta.xml', '');
     }
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

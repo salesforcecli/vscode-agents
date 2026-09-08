@@ -5,9 +5,22 @@ const importX = require('eslint-plugin-import-x');
 const { createTypeScriptImportResolver } = require('eslint-import-resolver-typescript');
 
 module.exports = tseslint.config(
-  // Former .eslintignore
+  // Former .eslintignore (plus coverage output; JS config files were never
+  // linted under the old `--ext .ts` setup, so keep TS-only scoping below).
   {
-    ignores: ['lib/', 'dist/', 'scripts/', 'webview/', 'test/', 'node_modules/', '.vscode-test/']
+    ignores: [
+      'lib/',
+      'dist/',
+      'coverage/',
+      'scripts/',
+      'webview/',
+      'test/',
+      'node_modules/',
+      '.vscode-test/',
+      '**/*.js',
+      '**/*.cjs',
+      '**/*.mjs'
+    ]
   },
   ...tseslint.configs.recommended,
   {
@@ -26,7 +39,9 @@ module.exports = tseslint.config(
     rules: {
       'import-x/extensions': ['error', 'ignorePackages', { js: 'never', jsx: 'never', ts: 'never', tsx: 'never' }],
       '@typescript-eslint/no-misused-promises': 'off',
-      '@typescript-eslint/no-floating-promises': 'warn'
+      '@typescript-eslint/no-floating-promises': 'warn',
+      // Allow intentionally-unused params/vars prefixed with an underscore.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
     }
   },
   // Disable stylistic rules that conflict with Prettier (former "prettier" extend). Keep last.

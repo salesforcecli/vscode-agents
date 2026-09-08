@@ -9,7 +9,10 @@ export interface Tab {
 
 interface TabNavigationProps {
   activeTab: number | 'preview' | 'tracer' | 'history';
-  onTabChange: (tab: any) => void;
+  // Method shorthand (rather than a property-typed function) so callers that only
+  // ever pass one branch of this union (e.g. App.tsx's string-only handler) remain
+  // assignable under TS's bivariant method-parameter checking.
+  onTabChange(tab: number | 'preview' | 'tracer' | 'history'): void;
   showTracerTab?: boolean;
   showHistoryTab?: boolean;
   tabs?: Tab[];
@@ -48,7 +51,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
         });
       }
     }
-  }, [activeTab, isCustomTabs, tabs]);
+  }, [activeTab, isCustomTabs]);
 
   React.useEffect(() => {
     updateIndicator();
@@ -67,7 +70,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [updateIndicator]);
 
-  const handleTabClick = (tab: any) => {
+  const handleTabClick = (tab: number | 'preview' | 'tracer' | 'history') => {
     onTabChange(tab);
   };
 

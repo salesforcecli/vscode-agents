@@ -1,7 +1,11 @@
 // VS Code API integration for the React app
+interface VsCodeWebviewApi {
+  postMessage: (message: unknown) => void;
+}
+
 declare global {
   interface Window {
-    vscode: any;
+    vscode: VsCodeWebviewApi;
   }
 }
 
@@ -76,14 +80,18 @@ export interface TraceStep {
     | 'responseValidation'
     | 'agentResponse';
   timing: string;
-  data: any;
+  data: unknown;
 }
 
-type MessageHandler = (data: any) => void;
+type MessageHandler<T = unknown> = (data: T) => void;
+// Handlers of varying payload types are stored together in a single map, so the
+// stored function type must accept anything a caller's specific handler could
+// require (contravariantly, that means a parameter type of `never`).
+type StoredMessageHandler = (data: never) => void;
 
 class VSCodeApiService {
   private vscode = window.vscode;
-  private messageHandlers: Map<string, Set<MessageHandler>> = new Map();
+  private messageHandlers: Map<string, Set<StoredMessageHandler>> = new Map();
 
   constructor() {
     // Listen for messages from VS Code
@@ -91,7 +99,7 @@ class VSCodeApiService {
       const message = event.data;
       const handlers = this.messageHandlers.get(message.command);
       if (handlers) {
-        handlers.forEach(handler => handler(message.data));
+        handlers.forEach(handler => handler(message.data as never));
       }
     });
 
@@ -127,7 +135,7 @@ class VSCodeApiService {
   }
 
   // Register a handler for specific message types
-  onMessage(command: string, handler: MessageHandler): () => void {
+  onMessage<T = unknown>(command: string, handler: MessageHandler<T>): () => void {
     if (!this.messageHandlers.has(command)) {
       this.messageHandlers.set(command, new Set());
     }
@@ -143,16 +151,16 @@ class VSCodeApiService {
   }
 
   // Send messages to VS Code
-  private postMessage(command: string, data?: any) {
+  private postMessage(command: string, data?: unknown) {
     this.vscode?.postMessage({ command, data });
   }
 
   // Dispatch a synthetic message to local listeners only (not sent to the extension).
   // Useful for optimistic UI updates that should mirror an extension-driven event.
-  emitLocal(command: string, data?: any) {
+  emitLocal(command: string, data?: unknown) {
     const handlers = this.messageHandlers.get(command);
     if (handlers) {
-      handlers.forEach(handler => handler(data));
+      handlers.forEach(handler => handler(data as never));
     }
   }
 
@@ -252,7 +260,7 @@ class VSCodeApiService {
   }
 
   // Test support - send test response messages
-  postTestMessage(command: string, data?: any) {
+  postTestMessage(command: string, data?: unknown) {
     this.postMessage(command, data);
   }
 }

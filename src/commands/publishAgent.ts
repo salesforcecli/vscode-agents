@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Commands } from '../enums/commands';
-import { SfProject, ConfigAggregator, Org, Lifecycle } from '@salesforce/core';
+import { SfProject, Lifecycle } from '@salesforce/core';
 import { Agent } from '@salesforce/agents';
 import { CoreExtensionService } from '../services/coreExtensionService';
 import { SfError } from '@salesforce/core';

@@ -8,7 +8,7 @@ interface PlanSuccessResponse {
   sessionId: string;
   intent?: string;
   topic?: string;
-  plan: any[];
+  plan: unknown[];
 }
 
 export interface TraceHistoryRowProps {

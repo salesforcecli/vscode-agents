@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Commands } from '../enums/commands';
-import { Agent } from '@salesforce/agents';
+import { Agent, ScriptAgent } from '@salesforce/agents';
 import { CoreExtensionService } from '../services/coreExtensionService';
 import { SfError, SfProject } from '@salesforce/core';
 import * as path from 'path';
@@ -45,7 +45,7 @@ export const registerValidateAgentCommand = () => {
     const normalizedFilePath = filePath.startsWith('local:') ? filePath.substring(6) : filePath;
 
     const fileUri = vscode.Uri.file(normalizedFilePath);
-    const fileContents = Buffer.from(await vscode.workspace.fs.readFile(fileUri)).toString();
+    await vscode.workspace.fs.readFile(fileUri);
 
     // Clear previous output
     logger.clear();
@@ -59,7 +59,7 @@ export const registerValidateAgentCommand = () => {
       },
       async progress => {
         progress.report({ message: 'Validating' });
-        let agent: any = undefined;
+        let agent: ScriptAgent | undefined;
         try {
           const connection = await CoreExtensionService.getDefaultConnection();
           const project = SfProject.getInstance();

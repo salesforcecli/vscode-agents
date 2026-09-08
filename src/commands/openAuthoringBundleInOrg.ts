@@ -16,7 +16,6 @@
 
 import * as vscode from 'vscode';
 import { Commands } from '../enums/commands';
-import { SfError } from '@salesforce/core';
 import { CoreExtensionService } from '../services/coreExtensionService';
 import { getAgentNameFromPath, selectAgentFromProject, getConnectionAndProject, handleCommandError } from './agentUtils';
 import { Logger } from '../utils/logger';
@@ -69,9 +68,9 @@ export const registerOpenAuthoringBundleInOrgCommand = () => {
           const frontdoorUrl = await org.getFrontDoorUrl(redirectUri);
 
           // Open in browser using VS Code
-          // Cast to any to prevent VS Code from parsing/encoding the URL
+          // Cast to Uri to prevent VS Code from parsing/encoding the URL
           // This preserves the already-encoded URL exactly as-is
-          await vscode.env.openExternal(frontdoorUrl as any); // doesn't change string
+          await vscode.env.openExternal(frontdoorUrl as unknown as vscode.Uri); // doesn't change string
 
           vscode.window.showInformationMessage('Agent opened successfully in the default org.');
         } catch (error) {

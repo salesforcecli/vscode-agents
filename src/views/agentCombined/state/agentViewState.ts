@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentSource, PreviewableAgent, ProductionAgent, ScriptAgent } from '@salesforce/agents';
+import { AgentSource } from '@salesforce/agents';
 import type { AgentInstance } from '../types';
 
 /**

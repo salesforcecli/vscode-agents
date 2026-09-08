@@ -4,7 +4,6 @@ import { vscodeApi } from '../../services/vscodeApi.js';
 import './ErrorBoundary.css';
 
 // React is required for JSX transform in test environment
-// @ts-ignore - React is used for JSX but not directly referenced
 void React;
 
 interface ErrorBoundaryProps {
