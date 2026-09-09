@@ -5,7 +5,10 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "node10",
+    // node10 resolution pairs with module=commonjs for ts-jest's CommonJS output.
+    // TS 6 deprecates it; this silences the error until a TS 7 migration.
+    "ignoreDeprecations": "6.0",
     "types": ["jest", "node", "@testing-library/jest-dom"],
     "isolatedModules": true
   },
