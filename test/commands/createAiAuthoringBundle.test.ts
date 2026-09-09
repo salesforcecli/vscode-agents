@@ -254,11 +254,7 @@ describe('createAiAuthoringBundle', () => {
       throw new Error(`ENOENT: no such file or directory, open '${filePath}'`);
     });
   });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
+  
   const defaultSpecTypeItem = { label: 'Default template (Recommended)', description: 'Start with a ready-to-use Agent Script template.', isCustom: false };
   const customSpecTypeItem = { label: 'From an agent spec YAML file (Advanced)', description: 'Generate an Agent Script file from an existing agent spec YAML file.', isCustom: true };
 

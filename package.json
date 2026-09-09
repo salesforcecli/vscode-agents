@@ -20,10 +20,10 @@
   ],
   "main": "lib/src/extension.js",
   "dependencies": {
-    "@salesforce/agents": "^1.6.4",
-    "@salesforce/core": "^8.28.3",
-    "@salesforce/kit": "^3.2.6",
-    "@salesforce/types": "^1.7.1",
+    "@salesforce/agents": "^2.2.0",
+    "@salesforce/core": "^9.1.9",
+    "@salesforce/kit": "^4.0.0",
+    "@salesforce/types": "^1.8.0",
     "cross-spawn": "^7.0.6",
     "fast-xml-parser": "^5.7.1",
     "prettier": "^3.8.3",
@@ -55,8 +55,8 @@
     "mocha": "^11.7.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "ts-jest": "^29.4.5",
-    "typescript": "^5.9.3"
+    "ts-jest": "^29.4.12",
+    "typescript": "^6.0.3"
   },
   "overrides": {
     "mocha": {

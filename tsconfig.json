@@ -3,17 +3,18 @@
 // Config ref: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html
 {
   "compilerOptions": {
-    "module": "Node16",
+    "module": "NodeNext",
     "target": "ES2022",
     "outDir": "lib",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "sourceMap": true,
     "rootDir": ".",
     "strict": true,
-    "moduleResolution": "Node16",
+    "moduleResolution": "NodeNext",
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     /* Additional Checks */
+    "types": ["node", "mocha", "jest", "@testing-library/jest-dom"],
     "noFallthroughCasesInSwitch": true,
     "noUnusedParameters": true,
     "esModuleInterop": true,
